@@ -1,0 +1,12 @@
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Editor backup/temp files
+*~
+#*#
+*.bak
+*.tmp
+
+# Example for specific files you might want to ignore later
+# my_local_config.json

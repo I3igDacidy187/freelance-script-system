@@ -346,13 +346,17 @@ jq -c '.sections[]' "$CONFIG_FILE" | while read -r section_json_str; do
     echo "" >> "$README_FILE"
 
     # Append content from section's MD file
-    SECTION_FILE=$(jq -r ".file" <<< "$section_json_str")
-    if [ -f "$SECTION_FILE" ]; then
-        cat "$SECTION_FILE" >> "$README_FILE"
-        echo "" >> "$README_FILE" # Add newline
-    else
-        echo "_Content file not found: ${SECTION_FILE}_" >> "$README_FILE"
-        echo "" >> "$README_FILE"
+    # Only append if 'file' key exists and is not null/empty for non-case-study sections
+    if [ "$SECTION_ID" != "case-study-main" ]; then
+        SECTION_FILE=$(jq -r ".file" <<< "$section_json_str")
+        if [ -n "$SECTION_FILE" ] && [ "$SECTION_FILE" != "null" ] && [ -f "$SECTION_FILE" ]; then
+            cat "$SECTION_FILE" >> "$README_FILE"
+            echo "" >> "$README_FILE" # Add newline
+        else
+            # For debugging, you could uncomment this:
+            # echo "_WARNING: Content file not found or not specified for section ID: ${SECTION_ID}_" >> "$README_FILE"
+            : # Do nothing, just skip appending file content for this section
+        fi
     fi
     
     # Handle special link for 'See It for Yourself'
@@ -368,12 +372,10 @@ jq -c '.sections[]' "$CONFIG_FILE" | while read -r section_json_str; do
         echo "" >> "$README_FILE"
 
         # Loop through phases within the case study
-        # This is the problematic block where the 'phases' indexing error likely occurs
-        # The issue is probably that some section_json_str being passed here might not have a .phases field.
-        # Let's ensure we only process phases from the case-study-main section object.
-        CASE_STUDY_SECTION_JSON=$(jq -c '.sections[] | select(.id == "case-study-main")' "$CONFIG_FILE")
+        # Explicitly get the 'phases' array from the case-study-main section
+        CASE_STUDY_PHASES=$(echo "$section_json_str" | jq -c '.phases[]')
 
-        echo "$CASE_STUDY_SECTION_JSON" | jq -c '.phases[]' | while read -r phase_json_str; do
+        echo "$CASE_STUDY_PHASES" | while read -r phase_json_str; do
             PHASE_ID=$(echo "$phase_json_str" | jq -r .id)
             PHASE_TITLE=$(echo "$phase_json_str" | jq -r .title)
             # Generating anchor ID safely
